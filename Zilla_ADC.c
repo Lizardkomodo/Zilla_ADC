@@ -14,9 +14,15 @@
 extern I2C_HandleTypeDef hi2c1;
 extern ADC_HandleTypeDef hadc1;
 
-static float R1 = 18000;
+static float R1 = 20000;
 static float logR2, R2, T;
 static float c1 = 1.009249522e-03, c2 = 2.378405444e-04, c3 = 2.019202697e-07;
+
+#define SERIESRESISTOR 18000          //Value of the series resistor in ohms
+#define THERMISTORNOMINAL 20000       //Nominal resistance of the thermistor at 25°C in ohms
+#define TEMPERATURENOMINAL 25           //Nominal temperature for the thermistor resistance in degrees Celsius
+#define BCOEFFICIENT 3950
+
 
 
 void Zilla_ADC_Init(){
@@ -24,8 +30,8 @@ void Zilla_ADC_Init(){
 
 //	 HAL_ADC_Init(&hadc2);
 //	 HAL_ADC_Init(&hadc3);
-}
 
+}
 uint8_t Zilla_I2C_GetValue_DMA(){
 
 
@@ -73,7 +79,7 @@ uint16_t Zilla_ADC_GetTemperatureF(){
 		//HAL_ADC_GetValue(&hadc1);
 		//HAL_ADC_GetValue(&hadc1);
 
-		  R2 = R1 * (4095 / (float)tempdata - 1.0);
+		  R2 = R1 * (4094 / (float)tempdata - 1.0);
 		  R2 = fabsf(R2);
 		  logR2 = log(R2);
 		  T = (1.0 / (c1 + c2*logR2 + c3*logR2*logR2*logR2));
@@ -84,7 +90,28 @@ uint16_t Zilla_ADC_GetTemperatureF(){
 
 }
 
+uint16_t Zilla_ADC_GetTemperature_Steinhart(){
+	float steinhart;
+		//uint8_t tempdat8bit;
+		   HAL_ADC_Start(&hadc1);
+			HAL_ADC_PollForConversion(&hadc1, 100);
+			//HAL_ADC_PollForConversion(&hadc1, 100);
+			//HAL_ADC_PollForConversion(&hadc1, 100);
 
+			steinhart = HAL_ADC_GetValue(&hadc1);
+			//HAL_ADC_GetValue(&hadc1);
+			//HAL_ADC_GetValue(&hadc1);
+
+	steinhart = steinhart / THERMISTORNOMINAL;  //Compute the ratio of thermistor resistance to nominal resistance
+	          steinhart = log(steinhart);  //Compute the natural logarithm of the resistance ratio
+	          steinhart /= BCOEFFICIENT;  //Divide by the thermistor's Beta coefficient
+	          steinhart += 1.0 / (TEMPERATURENOMINAL + 273.15);  //Add the reciprocal of the nominal temperature in Kelvin
+	          steinhart = 1.0 / steinhart;  //Compute the reciprocal to get the temperature in Kelvin
+	          steinhart -= 273.15;  //Convert the temperature from Kelvin to Celsius
+
+	          return steinhart;
+
+}
 
 
 
