@@ -16,12 +16,12 @@ extern ADC_HandleTypeDef hadc1;
 
 static float R1 = 20000;
 static float logR2, R2, T;
-static float c1 = 1.009249522e-03, c2 = 2.378405444e-04, c3 = 2.019202697e-07;
+static float c1 = 2.849546160e-03, c2 = -1.163084276e-4, c3 = 17.05227056e-7;
 
 #define SERIESRESISTOR 18000          //Value of the series resistor in ohms
-#define THERMISTORNOMINAL 20000       //Nominal resistance of the thermistor at 25°C in ohms
+#define THERMISTORNOMINAL 9000       //Nominal resistance of the thermistor at 25°C in ohms
 #define TEMPERATURENOMINAL 25           //Nominal temperature for the thermistor resistance in degrees Celsius
-#define BCOEFFICIENT 3950
+#define BCOEFFICIENT 6065.27
 
 
 
@@ -83,7 +83,9 @@ uint16_t Zilla_ADC_GetTemperatureF(){
 		  R2 = fabsf(R2);
 		  logR2 = log(R2);
 		  T = (1.0 / (c1 + c2*logR2 + c3*logR2*logR2*logR2));
+		//  T = fabsf(T);
 		  T = T - 273.15;
+
 		  T = (T * 9.0)/ 5.0 + 32.0;
 		return T;
 
@@ -113,7 +115,30 @@ uint16_t Zilla_ADC_GetTemperature_Steinhart(){
 
 }
 
+uint16_t Zilla_ADC_GetTemperature_SciFiDev(){
+	float steinhart;
+		//uint8_t tempdat8bit;
+		   HAL_ADC_Start(&hadc1);
+			HAL_ADC_PollForConversion(&hadc1, 100);
+			//HAL_ADC_PollForConversion(&hadc1, 100);
+			//HAL_ADC_PollForConversion(&hadc1, 100);
+			steinhart = HAL_ADC_GetValue(&hadc1);
+			//HAL_ADC_GetValue(&hadc1);
+			//HAL_ADC_GetValue(&hadc1);
 
+
+
+
+	steinhart = steinhart / THERMISTORNOMINAL;  //Compute the ratio of thermistor resistance to nominal resistance
+	          steinhart = log(steinhart);  //Compute the natural logarithm of the resistance ratio
+	          steinhart /= BCOEFFICIENT;  //Divide by the thermistor's Beta coefficient
+	          steinhart += 1.0 / (TEMPERATURENOMINAL + 273.15);  //Add the reciprocal of the nominal temperature in Kelvin
+	          steinhart = 1.0 / steinhart;  //Compute the reciprocal to get the temperature in Kelvin
+	          steinhart -= 273.15;  //Convert the temperature from Kelvin to Celsius
+
+	          return steinhart;
+
+}
 
 
 
@@ -127,7 +152,6 @@ void zilla_i2c_write(uint8_t device_address, uint8_t register_pointer,
 
 	HAL_I2C_Master_Transmit(&hi2c1, device_address << 1, data, 2, 100); // data is the start pointer of our array
 }
-
 
 
 
