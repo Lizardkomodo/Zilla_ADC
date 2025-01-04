@@ -14,14 +14,10 @@
 extern I2C_HandleTypeDef hi2c1;
 extern ADC_HandleTypeDef hadc1;
 
-static float R1 = 20000;
-static float logR2, R2, T;
-static float c1 = 2.849546160e-03, c2 = -1.163084276e-4, c3 = 17.05227056e-7;
+static float A = 0.6416252210e-3, B = 2.280518351e-4, C = 0.5691148404e-7;  //100k Values from datasheet https://www.tme.eu/Document/f9d2f5e38227fc1c7d979e546ff51768/NTCM-100K-B3950.pdf
 
-#define SERIESRESISTOR 18000          //Value of the series resistor in ohms
-#define THERMISTORNOMINAL 9000       //Nominal resistance of the thermistor at 25°C in ohms
-#define TEMPERATURENOMINAL 25           //Nominal temperature for the thermistor resistance in degrees Celsius
-#define BCOEFFICIENT 6065.27
+#define SERIESRESISTOR 102000          //Value of the series resistor in ohms
+#define THERMISTOR25C 100000       //Nominal resistance of the thermistor at 25°C in ohms
 
 
 
@@ -67,78 +63,63 @@ uint16_t Zilla_ADC_GetValue(){
 
 }
 
-uint16_t Zilla_ADC_GetTemperatureF(){
-	float tempdata;
-	//uint8_t tempdat8bit;
-	   HAL_ADC_Start(&hadc1);
-		HAL_ADC_PollForConversion(&hadc1, 100);
-		//HAL_ADC_PollForConversion(&hadc1, 100);
-		//HAL_ADC_PollForConversion(&hadc1, 100);
-
-		tempdata = HAL_ADC_GetValue(&hadc1);
-		//HAL_ADC_GetValue(&hadc1);
-		//HAL_ADC_GetValue(&hadc1);
-
-		  R2 = R1 * (4094 / (float)tempdata - 1.0);
-		  R2 = fabsf(R2);
-		  logR2 = log(R2);
-		  T = (1.0 / (c1 + c2*logR2 + c3*logR2*logR2*logR2));
-		//  T = fabsf(T);
-		  T = T - 273.15;
-
-		  T = (T * 9.0)/ 5.0 + 32.0;
-		return T;
 
 
-}
-
-uint16_t Zilla_ADC_GetTemperature_Steinhart(){
-	float steinhart;
+uint16_t Zilla_ADC_GetTemperature_HighSideNTC_SciFiDev(){
+	float resistance;
+	float temperature;
+	float placeholder;
+	float logRes;
 		//uint8_t tempdat8bit;
 		   HAL_ADC_Start(&hadc1);
 			HAL_ADC_PollForConversion(&hadc1, 100);
 			//HAL_ADC_PollForConversion(&hadc1, 100);
 			//HAL_ADC_PollForConversion(&hadc1, 100);
-
-			steinhart = HAL_ADC_GetValue(&hadc1);
+			placeholder = HAL_ADC_GetValue(&hadc1);
 			//HAL_ADC_GetValue(&hadc1);
 			//HAL_ADC_GetValue(&hadc1);
 
-	steinhart = steinhart / THERMISTORNOMINAL;  //Compute the ratio of thermistor resistance to nominal resistance
-	          steinhart = log(steinhart);  //Compute the natural logarithm of the resistance ratio
-	          steinhart /= BCOEFFICIENT;  //Divide by the thermistor's Beta coefficient
-	          steinhart += 1.0 / (TEMPERATURENOMINAL + 273.15);  //Add the reciprocal of the nominal temperature in Kelvin
-	          steinhart = 1.0 / steinhart;  //Compute the reciprocal to get the temperature in Kelvin
-	          steinhart -= 273.15;  //Convert the temperature from Kelvin to Celsius
 
-	          return steinhart;
+			resistance = 4094 * SERIESRESISTOR;
+			resistance = resistance / placeholder;
+			resistance = resistance - SERIESRESISTOR;
+			logRes = log(resistance);
+			temperature = A + B*logRes + C*logRes*logRes*logRes;
+			temperature = 1 / temperature;
+			temperature = temperature - 273.15;
+			temperature = (temperature * 9.0)/ 5.0 + 32.0;
+	          return temperature;
+
+
 
 }
 
-uint16_t Zilla_ADC_GetTemperature_SciFiDev(){
-	float steinhart;
+uint16_t Zilla_ADC_GetTemperature_LowSideNTC_SciFiDev(){
+	float resistance;
+	float placeholder;
+	float temperature;
+	float logRes;
 		//uint8_t tempdat8bit;
 		   HAL_ADC_Start(&hadc1);
 			HAL_ADC_PollForConversion(&hadc1, 100);
 			//HAL_ADC_PollForConversion(&hadc1, 100);
 			//HAL_ADC_PollForConversion(&hadc1, 100);
-			steinhart = HAL_ADC_GetValue(&hadc1);
+			resistance = HAL_ADC_GetValue(&hadc1);
 			//HAL_ADC_GetValue(&hadc1);
 			//HAL_ADC_GetValue(&hadc1);
-
-
-
-
-	steinhart = steinhart / THERMISTORNOMINAL;  //Compute the ratio of thermistor resistance to nominal resistance
-	          steinhart = log(steinhart);  //Compute the natural logarithm of the resistance ratio
-	          steinhart /= BCOEFFICIENT;  //Divide by the thermistor's Beta coefficient
-	          steinhart += 1.0 / (TEMPERATURENOMINAL + 273.15);  //Add the reciprocal of the nominal temperature in Kelvin
-	          steinhart = 1.0 / steinhart;  //Compute the reciprocal to get the temperature in Kelvin
-	          steinhart -= 273.15;  //Convert the temperature from Kelvin to Celsius
-
-	          return steinhart;
+			placeholder = 4094 - resistance;
+			resistance = resistance * SERIESRESISTOR;
+			resistance = resistance / placeholder;
+			logRes = log(resistance);
+			temperature = A + B*logRes + C*logRes*logRes*logRes;
+			temperature = 1 / temperature;
+			temperature = temperature - 273.15;
+			temperature = (temperature * 9.0)/ 5.0 + 32.0;
+	          return temperature;
 
 }
+
+
 
 
 

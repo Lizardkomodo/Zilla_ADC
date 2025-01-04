@@ -31,11 +31,9 @@ uint8_t Zilla_I2C_GetValue();
 
 uint16_t Zilla_ADC_GetValue();
 
-uint16_t Zilla_ADC_GetTemperatureF();
+uint16_t Zilla_ADC_GetTemperature_HighSideNTC_SciFiDev();
+uint16_t Zilla_ADC_GetTemperature_LowSideNTC_SciFiDev();
 
-uint16_t Zilla_ADC_GetTemperature_Steinhart();
-
-uint16_t Zilla_ADC_GetTemperature_SciFiDev();
 
 void zilla_i2c_write(uint8_t device_address, uint8_t register_pointer, uint8_t register_value); //Made static so its only valid ion this file, and does not conflict if zilla functions are used in main code
 
